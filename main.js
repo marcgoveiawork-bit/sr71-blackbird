@@ -332,7 +332,9 @@ const JET_FIELDS = new Set(['jz', 'jy', 'pitch', 'roll', 'yaw']);
 function resolveKey(name, prevAz, inherited) {
   const k = { ...inherited, ...KEYS[name] };
   const anchored = typeof k.look === 'string';
-  const look = anchored ? anchors[k.look].getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(...k.look);
+  // Anchors are read in the jet's resting pose (their position relative to the jet), NOT its current world position:
+  // layout() also runs on resize / full screen / font load, when the jet may be parked or flying somewhere else.
+  const look = anchored ? anchors[k.look].position.clone() : new THREE.Vector3(...k.look);
   const camPos = anchored ? look.clone().add(new THREE.Vector3(...k.cam)) : new THREE.Vector3(...k.cam);
   const off = camPos.sub(look), r = off.length();
   let az = Math.atan2(off.x, off.z);
@@ -713,8 +715,12 @@ const fsElement = () => document.fullscreenElement || document.webkitFullscreenE
 const enterFS = () => Promise.resolve((root.requestFullscreen || root.webkitRequestFullscreen).call(root, { navigationUI: 'hide' }));
 const exitFS = () => Promise.resolve((document.exitFullscreen || document.webkitExitFullscreen).call(document));
 if (!fsSupported) { fsBtn.hidden = true; fsTourBtn.hidden = true; }
+let fsFadeTimer;
 const syncFS = () => {
   const on = !!fsElement();
+  // brief fade to black while the page re-measures at the new size, so the switch never shows a half-updated frame
+  fade.classList.add('on'); clearTimeout(fsFadeTimer);
+  fsFadeTimer = setTimeout(() => fade.classList.remove('on'), 650);
   fsBtn.setAttribute('aria-pressed', on);
   fsBtn.querySelector('span').textContent = on ? 'Exit full screen' : 'Full screen';
   fsBtn.classList.toggle('active', on);
