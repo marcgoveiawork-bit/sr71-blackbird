@@ -645,23 +645,33 @@ function tourPlan() {
   return legs;
 }
 const EASE = { linear: t => t, inout: smooth, out: t => 1 - (1 - t) ** 3 };
+let route = [], leg = 0, legT0 = 0;
 function startTour() {
   if (touring) return;
   touring = true; tourStop.classList.add('on'); tourStop.focus({ preventScroll: true });
-  const legs = tourPlan();
   cancelLoop();
-  if (scrollY > 2) legs.unshift({ from: scrollY, to: legs[0]?.from ?? 0, dur: 1.5, ease: 'inout' });
-  let i = 0, t0 = performance.now();
+  route = tourPlan(); leg = 0; legT0 = performance.now();
+  if (scrollY > 2) route.unshift({ from: scrollY, to: route[0]?.from ?? 0, dur: 1.5, ease: 'inout' });
   const step = now => {
     if (!touring) return;
-    const leg = legs[i];
-    if (!leg) { stopTour(); startLoop(); return; }                  // finished: on the final page, offer a replay
-    const t = Math.min(1, (now - t0) / 1000 / leg.dur);
-    setY(lerp(leg.from, leg.to, EASE[leg.ease](t)));
-    if (t >= 1) { i++; t0 = now; }
+    const L = route[leg];
+    if (!L) { stopTour(); startLoop(); return; }                    // finished: on the final page, offer a replay
+    const t = Math.min(1, (now - legT0) / 1000 / L.dur);
+    setY(lerp(L.from, L.to, EASE[L.ease](t)));
+    if (t >= 1) { leg++; legT0 = now; }
     requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
+}
+// The window changed size mid-tour (e.g. full screen): re-plan the route and carry on from where we are.
+function retargetTour() {
+  if (!touring) return;
+  const y = scrollY, fresh = tourPlan();
+  const i = fresh.findIndex(l => l.to > y + 1);
+  if (i < 0) { route = []; leg = 0; return; }
+  const L = fresh[i];
+  fresh[i] = { ...L, from: y, dur: Math.max(0.8, L.dur * (L.to - y) / Math.max(1, L.to - L.from)) };
+  route = fresh.slice(i); leg = 0; legT0 = performance.now();
 }
 function stopTour() {
   touring = false; tourStop.classList.remove('on');
@@ -694,6 +704,27 @@ function replay() {
     setTimeout(() => { fade.classList.remove('on'); startTour(); }, 900);
   }, 900);
 }
+/* Full screen: a toggle in the corner, plus "Full-screen tour" (full screen + auto-play) on the opening screen.
+   Hidden where the browser doesn't allow it (e.g. iPhone Safari, which only does full screen for video). */
+const fsBtn = document.getElementById('fsBtn'), fsTourBtn = document.getElementById('fsTourBtn');
+const root = document.documentElement;
+const fsSupported = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+const enterFS = () => Promise.resolve((root.requestFullscreen || root.webkitRequestFullscreen).call(root, { navigationUI: 'hide' }));
+const exitFS = () => Promise.resolve((document.exitFullscreen || document.webkitExitFullscreen).call(document));
+if (!fsSupported) { fsBtn.hidden = true; fsTourBtn.hidden = true; }
+const syncFS = () => {
+  const on = !!fsElement();
+  fsBtn.setAttribute('aria-pressed', on);
+  fsBtn.querySelector('span').textContent = on ? 'Exit full screen' : 'Full screen';
+  fsBtn.classList.toggle('active', on);
+};
+document.addEventListener('fullscreenchange', syncFS);
+document.addEventListener('webkitfullscreenchange', syncFS);
+fsBtn.addEventListener('click', () => (fsElement() ? exitFS() : enterFS()).catch(() => {}));
+fsTourBtn.addEventListener('click', () => {
+  enterFS().catch(() => {}).finally(() => setTimeout(startTour, 450)); // let the page re-measure at the new size first
+});
 tourBtn.addEventListener('click', startTour);
 tourStop.addEventListener('click', stopTour);
 document.getElementById('loopStay').addEventListener('click', cancelLoop);
@@ -706,7 +737,7 @@ for (const ev of ['wheel', 'touchstart', 'keydown']) addEventListener(ev, e => {
 
 // Re-measure whenever anything could move the sections: window size, web fonts arriving, content reflow.
 let relayoutTimer;
-const relayout = () => { clearTimeout(relayoutTimer); relayoutTimer = setTimeout(() => { if (loaded) { lenis?.resize(); layout(); } }, 120); };
+const relayout = () => { clearTimeout(relayoutTimer); relayoutTimer = setTimeout(() => { if (loaded) { lenis?.resize(); layout(); retargetTour(); } }, 120); };
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();

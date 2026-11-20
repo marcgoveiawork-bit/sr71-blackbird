@@ -28,6 +28,10 @@ pausing only where there is text to read and rolling through the closing poster 
 key or the Stop button hands control back. When it finishes, a 10-second countdown replays it (fade to black, back
 to the top), so it can run as a moving wallpaper; "Stay on this page" keeps the final poster on screen instead.
 
+**Full screen:** a toggle in the top-right corner, and a "Full-screen tour" button on the opening screen that goes full
+screen and starts the auto-play in one click. If the window size changes mid-tour, the route is re-planned and carries on.
+Hidden where the browser doesn't allow page full screen (iPhone Safari only allows it for video).
+
 ## Run it locally
 
 The page loads its files by relative path, so it needs a local web server (opening `index.html` directly won't work):

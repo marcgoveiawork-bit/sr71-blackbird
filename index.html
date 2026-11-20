@@ -60,6 +60,13 @@ p{margin:.7em 0 0;max-width:34em}
 #loopBar i{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--red);transform-origin:left;transition:transform .1s linear}
 #fade{position:fixed;inset:0;z-index:7;background:#000;opacity:0;pointer-events:none;transition:opacity .8s}
 #fade.on{opacity:1}
+#hint svg,#fsBtn svg{width:15px;height:15px;fill:none;stroke:var(--red);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#fsBtn{position:fixed;right:18px;top:18px;z-index:5;display:flex;align-items:center;gap:8px;padding:0 14px;min-height:40px;cursor:pointer;
+  font:500 14px "Barlow Condensed",sans-serif;color:var(--ink);background:rgba(0,0,0,.6);border:1px solid rgba(236,235,230,.22);border-radius:999px;transition:background .3s,border-color .3s,opacity .3s}
+#fsBtn:hover{background:rgba(211,36,46,.3);border-color:rgba(211,36,46,.7)}
+#fsBtn:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+#fsBtn.active{opacity:.45}#fsBtn.active:hover{opacity:1}
+#fsBtn[hidden],#hint button[hidden]{display:none}
 #tourStop{position:fixed;left:20px;bottom:20px;z-index:5;opacity:0;pointer-events:none;transition:opacity .4s}
 #tourStop.on{opacity:1;pointer-events:auto}
 #tourStop b{border:0;width:10px;height:10px;background:var(--red)}
@@ -140,6 +147,8 @@ p{margin:.7em 0 0;max-width:34em}
   .chap.pin .copy{top:52vh;margin-top:52vh}
   .finale .blurb{font-size:12.5px}
   #loopBar{left:50%;top:10px;transform:translateX(-50%)}
+  #fsBtn span{display:none}#fsBtn{padding:0 12px;min-height:40px;top:12px;right:12px}
+  #hint{flex-wrap:wrap;justify-content:center;width:calc(100vw - 24px)}
   .finale .sheet{padding-top:calc(7vh + 34px)}
   .copy{text-shadow:0 1px 14px rgba(0,0,0,.9)}
   .records{gap:22px 20px}
@@ -173,7 +182,8 @@ p{margin:.7em 0 0;max-width:34em}
     <div class="msg" id="loadMsg">Spooling up the J58</div>
   </div>
 </div>
-<div id="hint"><span class="cue" aria-hidden="true">Scroll to begin<i></i></span><button type="button" id="tourBtn"><b></b>Auto-play tour</button></div>
+<div id="hint"><span class="cue" aria-hidden="true">Scroll to begin<i></i></span><button type="button" id="tourBtn"><b></b>Auto-play tour</button><button type="button" id="fsTourBtn"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 7V2h5M13 2h5v5M18 13v5h-5M7 18H2v-5"/></svg>Full-screen tour</button></div>
+<button type="button" id="fsBtn" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 7V2h5M13 2h5v5M18 13v5h-5M7 18H2v-5"/></svg><span>Full screen</span></button>
 <button type="button" id="tourStop"><b></b>Stop tour</button>
 <div id="loopBar" role="status"><span>Replaying in <b id="loopN">10</b>s</span><button type="button" id="loopStay">Stay on this page</button><i id="loopFill"></i></div>
 <div id="fade" aria-hidden="true"></div>
