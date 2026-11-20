@@ -422,9 +422,10 @@ const hint = document.getElementById('hint');
 const finaleMore = document.querySelector('.finale .more');
 function runCounters(sec) {
   sec.querySelectorAll('[data-count]').forEach(el => {
-    if (el.dataset.done) return; el.dataset.done = 1;
     const small = el.querySelector('small').outerHTML, end = +el.dataset.count, dec = +el.dataset.dec, t0 = performance.now(), dur = reduceMotion ? 1 : 2200;
+    const run = el._run = {};                                         // a newer run cancels this one
     const step = now => {
+      if (el._run !== run) return;
       const t = clamp01((now - t0) / dur), v = end * (1 - (1 - t) ** 3);
       el.innerHTML = v.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + small;
       if (t < 1) requestAnimationFrame(step);
@@ -625,33 +626,38 @@ const setY = y => (lenis ? lenis.scrollTo(y, { immediate: true, force: true }) :
 function tourPlan() {
   const max = document.documentElement.scrollHeight - innerHeight, vh = innerHeight;
   const clampY = y => Math.min(max, Math.max(0, y));
-  // waypoints: the start and end of every hold, in scroll order
-  const pts = [];
-  for (const st of stops) {
-    const a = clampY(st.y0), b = clampY(st.y1);
-    if (!pts.length || a > pts.at(-1).y + 1) pts.push({ y: a, hold: false });
-    if (b > a + 1) pts.push({ y: b, hold: true });                  // reaching b means we crossed a hold
+  // pauses: the holds of chapters that show text. Not the opening poster (start moving at once) and not the
+  // closing poster (it rolls through to the end in one smooth move, like end credits).
+  const holds = stops
+    .filter(st => st.y1 > st.y0 + 1 && st.y0 > 0 && st.name !== 'finale')
+    .map(st => [clampY(st.y0), clampY(st.y1)])
+    .sort((a, b) => a[0] - b[0]);
+  const legs = [];
+  let y = 0;
+  for (const [a, b] of holds) {
+    if (a < y + 1) continue;
+    const first = !legs.length, d = (a - y) / vh;
+    legs.push({ from: y, to: a, dur: Math.min(7, Math.max(first ? 1.8 : 2.2, d * 1.6)), ease: first ? 'out' : 'inout' });
+    legs.push({ from: a, to: b, dur: Math.max(3.4, (b - a) / vh * 2.4), ease: 'linear' }); // slow glide while reading
+    y = b;
   }
-  if (pts.at(-1).y < max - 1) pts.push({ y: max, hold: false });
-  // each leg: holds glide slowly (text on screen), moves between holds take a few seconds with easing
-  return pts.slice(1).map((p, i) => {
-    const from = pts[i].y, dist = p.y - from;
-    const dur = p.hold ? 3.4 : Math.min(6, Math.max(2.2, dist / vh * 1.6));
-    return { from, to: p.y, dur, ease: !p.hold };
-  }).filter(l => l.to > l.from + 1);
+  if (max > y + 1) legs.push({ from: y, to: max, dur: Math.min(14, Math.max(5, (max - y) / vh * 2)), ease: 'inout' }); // the finale roll
+  return legs;
 }
+const EASE = { linear: t => t, inout: smooth, out: t => 1 - (1 - t) ** 3 };
 function startTour() {
   if (touring) return;
   touring = true; tourStop.classList.add('on'); tourStop.focus({ preventScroll: true });
   const legs = tourPlan();
-  if (scrollY > 2) legs.unshift({ from: scrollY, to: legs[0]?.from ?? 0, dur: 1.5, ease: true });
+  cancelLoop();
+  if (scrollY > 2) legs.unshift({ from: scrollY, to: legs[0]?.from ?? 0, dur: 1.5, ease: 'inout' });
   let i = 0, t0 = performance.now();
   const step = now => {
     if (!touring) return;
     const leg = legs[i];
-    if (!leg) { stopTour(); return; }                               // finished: stay on the final page
+    if (!leg) { stopTour(); startLoop(); return; }                  // finished: on the final page, offer a replay
     const t = Math.min(1, (now - t0) / 1000 / leg.dur);
-    setY(lerp(leg.from, leg.to, leg.ease ? smooth(t) : t));
+    setY(lerp(leg.from, leg.to, EASE[leg.ease](t)));
     if (t >= 1) { i++; t0 = now; }
     requestAnimationFrame(step);
   };
@@ -660,10 +666,42 @@ function startTour() {
 function stopTour() {
   touring = false; tourStop.classList.remove('on');
 }
+// After a full run: a 10 second countdown, then fade to black and play again (a moving wallpaper).
+// "Stay on this page", or any scroll, touch or key, cancels it and leaves the final poster on screen.
+const LOOP_SECONDS = 10;
+const loopBar = document.getElementById('loopBar'), loopN = document.getElementById('loopN'), loopFill = document.getElementById('loopFill');
+const fade = document.getElementById('fade');
+let loopTimer = null;
+function startLoop() {
+  cancelLoop();
+  const t0 = performance.now();
+  loopBar.classList.add('on');
+  loopTimer = setInterval(() => {
+    const left = Math.max(0, LOOP_SECONDS - (performance.now() - t0) / 1000);
+    loopN.textContent = Math.ceil(left);
+    loopFill.style.transform = `scaleX(${left / LOOP_SECONDS})`;
+    if (left <= 0) { cancelLoop(); replay(); }
+  }, 100);
+}
+function cancelLoop() {
+  clearInterval(loopTimer); loopTimer = null; loopBar.classList.remove('on');
+  loopN.textContent = LOOP_SECONDS; loopFill.style.transform = 'scaleX(1)';
+}
+function replay() {
+  fade.classList.add('on');
+  setTimeout(() => {                                                 // under black: back to the top, let the scene settle
+    setY(0);
+    setTimeout(() => { fade.classList.remove('on'); startTour(); }, 900);
+  }, 900);
+}
 tourBtn.addEventListener('click', startTour);
 tourStop.addEventListener('click', stopTour);
+document.getElementById('loopStay').addEventListener('click', cancelLoop);
 for (const ev of ['wheel', 'touchstart', 'keydown']) addEventListener(ev, e => {
-  if (touring && !(ev === 'keydown' && (e.key === 'Enter' || e.key === ' ') && e.target === tourStop)) stopTour();
+  const onButton = ev === 'keydown' && (e.key === 'Enter' || e.key === ' ') && (e.target === tourStop || e.target.id === 'loopStay');
+  if (onButton) return;
+  if (touring) stopTour();
+  if (loopTimer) cancelLoop();
 }, { passive: true });
 
 // Re-measure whenever anything could move the sections: window size, web fonts arriving, content reflow.

@@ -49,6 +49,17 @@ p{margin:.7em 0 0;max-width:34em}
 #hint button:hover,#tourStop:hover{background:rgba(211,36,46,.4)}
 #hint button:focus-visible,#tourStop:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 #hint button b,#tourStop b{width:0;height:0;border-left:9px solid var(--red);border-top:6px solid transparent;border-bottom:6px solid transparent}
+#loopBar{position:fixed;left:20px;top:20px;z-index:6;display:flex;align-items:center;gap:12px;padding:6px 6px 6px 16px;
+  font:500 14px "Barlow Condensed",sans-serif;color:var(--dim);background:rgba(0,0,0,.78);border:1px solid rgba(211,36,46,.55);border-radius:999px;overflow:hidden;
+  opacity:0;pointer-events:none;transition:opacity .5s;white-space:nowrap}
+#loopBar.on{opacity:1;pointer-events:auto}
+#loopBar b{color:var(--ink);font-variant-numeric:tabular-nums}
+#loopBar button{font:inherit;color:var(--ink);background:rgba(211,36,46,.22);border:1px solid rgba(211,36,46,.7);border-radius:999px;min-height:36px;padding:0 14px;cursor:pointer}
+#loopBar button:hover{background:rgba(211,36,46,.4)}
+#loopBar button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+#loopBar i{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--red);transform-origin:left;transition:transform .1s linear}
+#fade{position:fixed;inset:0;z-index:7;background:#000;opacity:0;pointer-events:none;transition:opacity .8s}
+#fade.on{opacity:1}
 #tourStop{position:fixed;left:20px;bottom:20px;z-index:5;opacity:0;pointer-events:none;transition:opacity .4s}
 #tourStop.on{opacity:1;pointer-events:auto}
 #tourStop b{border:0;width:10px;height:10px;background:var(--red)}
@@ -128,6 +139,8 @@ p{margin:.7em 0 0;max-width:34em}
   .chap.pin{align-items:flex-start;padding-bottom:0}
   .chap.pin .copy{top:52vh;margin-top:52vh}
   .finale .blurb{font-size:12.5px}
+  #loopBar{left:50%;top:10px;transform:translateX(-50%)}
+  .finale .sheet{padding-top:calc(7vh + 34px)}
   .copy{text-shadow:0 1px 14px rgba(0,0,0,.9)}
   .records{gap:22px 20px}
   #rail{display:none}
@@ -162,6 +175,8 @@ p{margin:.7em 0 0;max-width:34em}
 </div>
 <div id="hint"><span class="cue" aria-hidden="true">Scroll to begin<i></i></span><button type="button" id="tourBtn"><b></b>Auto-play tour</button></div>
 <button type="button" id="tourStop"><b></b>Stop tour</button>
+<div id="loopBar" role="status"><span>Replaying in <b id="loopN">10</b>s</span><button type="button" id="loopStay">Stay on this page</button><i id="loopFill"></i></div>
+<div id="fade" aria-hidden="true"></div>
 <script>
 /* Loader: the compressor face of a J58 spins up as the page loads. main.js reports progress through
    window.loader.set(0..1) and calls window.loader.done() once the model, textures and shaders are ready. */

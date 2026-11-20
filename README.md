@@ -23,8 +23,10 @@ Designed by Marc Pio Goveia as a personal learning project in cinematic web desi
 
 Everything is driven by scroll position, so scrolling back up plays it all in reverse.
 
-**Auto-play tour:** the button next to "Scroll to begin" plays the whole story by itself in about two minutes,
-pausing on each chapter and ending on the closing poster. Any scroll, touch, key or the Stop button hands control back.
+**Auto-play tour:** the button next to "Scroll to begin" plays the whole story by itself in about a minute and a half,
+pausing only where there is text to read and rolling through the closing poster like end credits. Any scroll, touch,
+key or the Stop button hands control back. When it finishes, a 10-second countdown replays it (fade to black, back
+to the top), so it can run as a moving wallpaper; "Stay on this page" keeps the final poster on screen instead.
 
 ## Run it locally
 
