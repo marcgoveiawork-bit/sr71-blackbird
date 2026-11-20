@@ -3,7 +3,7 @@
 A single-page, scroll-driven 3D website about the Lockheed SR-71 Blackbird, set in a pitch-black studio.
 Designed by Marc Pio Goveia as a personal learning project in cinematic web design.
 
-**Live preview:** https://claude.ai/artifact/8aMUQkLaxJp2PH2QAubz7n
+**Live site:** https://marcgoveiawork-bit.github.io/sr71-blackbird/ (open it on any phone or computer)
 
 ## The story
 
