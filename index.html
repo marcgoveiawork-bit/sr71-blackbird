@@ -64,6 +64,10 @@ p{margin:.7em 0 0;max-width:34em}
 
 /* pinned chapters: the copy holds still (sticky) while the scene keeps moving behind it */
 .chap.pin{min-height:260vh;align-items:flex-start}
+.chap.pin.short{min-height:200vh}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:22px 0 4px}
+.stats .num{font-size:clamp(34px,4vw,48px)}
+.stats span{display:block;color:var(--dim);font-size:14px;line-height:1.35;margin-top:4px}
 .chap.pin .copy{position:sticky;top:34vh;margin-top:34vh}
 .chap.pin .copy{isolation:isolate}
 .chap.pin .copy::before{content:"";position:absolute;inset:-56px -72px;z-index:-1;background:rgba(0,0,0,.62);
@@ -277,11 +281,25 @@ p{margin:.7em 0 0;max-width:34em}
     </div>
   </section>
 
-  <section class="chap pin" data-key="takeoff">
+  <section class="chap pin short" data-key="takeoff">
     <div class="copy">
       <p class="kicker">Takeoff</p>
       <h2>Lit by a green flash</h2>
       <p>JP-7 fuel is so stable you can drop a lit match in it. To start the engines and light the afterburners, the jet injected triethylborane, which ignites on contact with air in a bright green flash.</p>
+    </div>
+  </section>
+
+  <!-- As the flame turns orange the copy hands over to the cost, while the jet spools up and lifts off -->
+  <section class="chap pin right" data-key="cost">
+    <div class="copy">
+      <p class="kicker">Cost</p>
+      <h2>The price of speed</h2>
+      <div class="stats">
+        <div><div class="num">$34M</div><span>per aircraft, in 1960s dollars</span></div>
+        <div><div class="num">32</div><span>built, 1964 to 1968</span></div>
+        <div><div class="num">$85K+</div><span>per flight hour, by official estimate</span></div>
+      </div>
+      <p>One SR-71 cost about ten times as much in today's money. Flying it was dearer still: once tankers and ground crews are counted, estimates pass $200,000 an hour, and a bill of $200&ndash;300 million a year helped retire the fleet in 1990.</p>
     </div>
   </section>
 

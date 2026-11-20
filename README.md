@@ -14,7 +14,8 @@ Designed by Marc Pio Goveia as a personal learning project in cinematic web desi
 | Titanium | Walkaround |
 | Drawn by hand | Front view against white blueprint linework; the text pins while the sheet scrolls away |
 | Exterior tour | Inlet spikes, chines, cockpit, canted fins, J58 nozzles, each with a red marker on the model |
-| Takeoff | Pinned: green triethylborane ignition, orange afterburners, side-on lift-off as the gear retracts |
+| Takeoff | Pinned: green triethylborane ignition while "Lit by a green flash" is on screen |
+| The price of speed | As the flame turns orange: unit cost, number built, operating cost; side-on lift-off as the gear retracts |
 | Climb, Mach 3.2 | Black void, speed streaks, heat glow on the airframe |
 | Records | Animated record figures |
 | Gone, but never caught | The jet shrinks into the distance and disappears |

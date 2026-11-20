@@ -305,12 +305,13 @@ const KEYS = {
   cockpit:  { look: 'cockpit', cam: [2.6, 1.5, 2.6], shift: -0.22 },
   fins:     { look: 'fins', cam: [4.2, 2.4, -3.2], fov: 32, shift: 0.22 },
   engines:  { look: 'nozzle', cam: [3.0, 0.4, -4.6], fov: 34, rim: 2.6, key: 1.6, env: 2.4, shift: -0.22 },
-  // takeoff chapter is pinned: its text holds while the engines light green, turn orange and the jet lifts off
-  ignite:   { at: ['takeoff', 0, 0.22], look: [0, 0, -2], cam: [-4.5, 1.4, -12], fov: 38, flame: 0.7, green: 1, bloom: 0.9, env: 0.9, key: 1, shift: 0.15 },
-  spool:    { at: ['takeoff', 0.36], flame: 1, green: 0 },
+  // takeoff chapter is pinned: "Lit by a green flash" holds while the engines burn green. The flame turns
+  // orange just as the next chapter's text (cost) takes over, and the jet spools up and lifts off under it.
+  ignite:   { at: ['takeoff', 0, 1.4], look: [0, 0, -2], cam: [-4.5, 1.4, -12], fov: 38, flame: 0.7, green: 1, bloom: 0.9, env: 0.9, key: 1, shift: 0.15 },
+  spool:    { at: ['cost', -0.25], flame: 1, green: 0 },
   // low side view (lit side, just below the wings) while the gear comes up, so the retraction is seen side-on
-  liftoff:  { at: ['takeoff', 0.6], look: [0, 1.1, 0.3], cam: [17, 0.25, 3.5], fov: 33, shift: 0.08, jy: 1.1, pitch: -0.1, gear: 0.5, floor: 0.3, speed: 0.5, shake: 0.6, key: 1.6, env: 1.2 },
-  takeoff:  { at: ['takeoff', 0.88, 1], look: [0, 2.2, 2], cam: [-6, 5.5, -14], fov: 40, floor: 0, gear: 0, speed: 1, flame: 1, green: 0, jy: 2.2, pitch: -0.12, env: 0.9, key: 1.2, rim: 2.5, bloom: 0.9, shake: 1, shift: 0.15 },
+  liftoff:  { at: ['cost', 0.4], look: [0, 1.1, 0.3], cam: [21, 0.3, 4.3], fov: 33, shift: -0.36, pz: 1.4, jy: 1.1, pitch: -0.1, gear: 0.5, floor: 0.3, speed: 0.5, shake: 0.6, key: 1.6, env: 1.2 },
+  takeoff:  { at: ['cost', 0.85, 1], look: [0, 2.2, 2], cam: [-6, 5.5, -14], fov: 40, pz: 1, floor: 0, gear: 0, speed: 1, flame: 1, green: 0, jy: 2.2, pitch: -0.12, env: 0.9, key: 1.2, rim: 2.5, bloom: 0.9, shake: 1, shift: -0.15 },
   climb:    { look: [0, 2.6, 1], cam: [11, 8, -12], fov: 36, pitch: -0.3, roll: 0.15, env: 0.8, key: 1.4, bloom: 0.8, shake: 0.4, shift: -0.12 },
   mach3:    { look: [0, 2.2, 0.5], cam: [22, 6, 6], fov: 30, speed: 1.4, flame: 0.75, heat: 0.8, pitch: 0, roll: 0, env: 0.7, key: 1.6, rim: 3, bloom: 0.8, shake: 0.15, shift: 0.3 },
   records:  { look: [0, 2.2, 0], cam: [-9, 22, -20], fov: 34, speed: 0.8, heat: 0.7, roll: -0.08, shift: 0.42 },
@@ -364,7 +365,8 @@ function layout() {
     const [t, h] = secTop(at[0]), y = f => t + f * (h - vh);
     return { name, y0: y(at[1]), y1: y(at[2] ?? at[1]) };
   };
-  const list = sections.map(sec => {
+  // sections without a KEYS entry (like `cost`) add no stop of their own: the keys placed inside them drive the scene
+  const list = sections.filter(sec => KEYS[sec.dataset.key]).map(sec => {
     const c = top + sec.offsetTop + sec.offsetHeight / 2 - vh / 2, h = sec.offsetHeight * HOLD / 2;
     return place(sec.dataset.key, { name: sec.dataset.key, y0: c - h, y1: c + h });
   });
