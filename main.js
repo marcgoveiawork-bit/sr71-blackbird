@@ -444,7 +444,7 @@ function updateOverlays() {
   sections.forEach((s, i) => dots[i].classList.toggle('on', s === sec && !(s.dataset.key === 'finale' && atEnd)));
   endDot.classList.toggle('on', atEnd);
   finaleMore.classList.toggle('on', sec?.dataset.key === 'finale' && !atEnd);
-  hint.classList.toggle('on', scrollY < 40);
+  hint.classList.toggle('on', scrollY < 40 && !touring);
   if (!sec && scrollY < innerHeight) sections[0].querySelector('.copy').classList.add('on');
   // marker: only while that section is showing, and only if its point is in front of the camera and on screen
   const anchor = sec?.dataset.anchor && anchors[sec.dataset.anchor];
@@ -613,6 +613,56 @@ async function warmUp() {
   show.forEach((o, i) => { o.visible = was[i]; });
   window.loader.set(1);
 }
+
+/* ----------------------------------------------------------- 7. AUTO-PLAY */
+// Glides through the whole story: a pause on each chapter so its text can be read, smooth moves between
+// them, ending on the closing poster. Any wheel, touch, key or the Stop button hands control back.
+let touring = false;
+const tourBtn = document.getElementById('tourBtn'), tourStop = document.getElementById('tourStop');
+const setY = y => (lenis ? lenis.scrollTo(y, { immediate: true, force: true }) : scrollTo(0, y));
+function tourPlan() {
+  const max = document.documentElement.scrollHeight - innerHeight, vh = innerHeight;
+  const clampY = y => Math.min(max, Math.max(0, y));
+  // waypoints: the start and end of every hold, in scroll order
+  const pts = [];
+  for (const st of stops) {
+    const a = clampY(st.y0), b = clampY(st.y1);
+    if (!pts.length || a > pts.at(-1).y + 1) pts.push({ y: a, hold: false });
+    if (b > a + 1) pts.push({ y: b, hold: true });                  // reaching b means we crossed a hold
+  }
+  if (pts.at(-1).y < max - 1) pts.push({ y: max, hold: false });
+  // each leg: holds glide slowly (text on screen), moves between holds take a few seconds with easing
+  return pts.slice(1).map((p, i) => {
+    const from = pts[i].y, dist = p.y - from;
+    const dur = p.hold ? 3.4 : Math.min(6, Math.max(2.2, dist / vh * 1.6));
+    return { from, to: p.y, dur, ease: !p.hold };
+  }).filter(l => l.to > l.from + 1);
+}
+function startTour() {
+  if (touring) return;
+  touring = true; tourStop.classList.add('on'); tourStop.focus({ preventScroll: true });
+  const legs = tourPlan();
+  if (scrollY > 2) legs.unshift({ from: scrollY, to: legs[0]?.from ?? 0, dur: 1.5, ease: true });
+  let i = 0, t0 = performance.now();
+  const step = now => {
+    if (!touring) return;
+    const leg = legs[i];
+    if (!leg) { stopTour(); return; }                               // finished: stay on the final page
+    const t = Math.min(1, (now - t0) / 1000 / leg.dur);
+    setY(lerp(leg.from, leg.to, leg.ease ? smooth(t) : t));
+    if (t >= 1) { i++; t0 = now; }
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+function stopTour() {
+  touring = false; tourStop.classList.remove('on');
+}
+tourBtn.addEventListener('click', startTour);
+tourStop.addEventListener('click', stopTour);
+for (const ev of ['wheel', 'touchstart', 'keydown']) addEventListener(ev, e => {
+  if (touring && !(ev === 'keydown' && (e.key === 'Enter' || e.key === ' ') && e.target === tourStop)) stopTour();
+}, { passive: true });
 
 // Re-measure whenever anything could move the sections: window size, web fonts arriving, content reflow.
 let relayoutTimer;

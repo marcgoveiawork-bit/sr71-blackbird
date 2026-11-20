@@ -22,6 +22,9 @@ Designed by Marc Pio Goveia as a personal learning project in cinematic web desi
 
 Everything is driven by scroll position, so scrolling back up plays it all in reverse.
 
+**Auto-play tour:** the button next to "Scroll to begin" plays the whole story by itself in about two minutes,
+pausing on each chapter and ending on the closing poster. Any scroll, touch, key or the Stop button hands control back.
+
 ## Run it locally
 
 The page loads its files by relative path, so it needs a local web server (opening `index.html` directly won't work):
@@ -42,6 +45,8 @@ Then open http://localhost:8000.
 3. **SCROLL**: every frame, the page measures where each section is on screen and blends the two nearest keys.
    Because this is recomputed from the live layout, the 3D scene can't drift out of step with the text.
 4. **RENDER**: applies the blended state (camera orbit, jet attitude, gear, flames, heat, lights) and renders with bloom.
+5. **AUTO-PLAY**: builds a route through every key's hold (slow glide while text is on screen, eased moves between)
+   and drives the scroll position along it.
 
 Rules baked into the code:
 - The Sketchfab model has no gear doors, so once the gear is up the camera always stays above the jet.
