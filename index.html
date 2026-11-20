@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SR-71 Blackbird</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Exo+2:ital,wght@1,800;1,900&family=Great+Vibes&family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/*
+VOICE: a flight film, quiet and documentary. Few words, big numbers, the jet does the talking.
+IDEA: one continuous camera take in a pitch-black studio, opening and closing on a poster.
+PICTURE: the SR-71 model full screen in three.js, lit, flown and heated by the scroll.
+COLOUR and TYPE: pitch black, bone-white text, SR-71 walkway red as the only accent. Anton / Exo 2 posters, Barlow text.
+LAYOUT: fixed WebGL stage behind; story chapters scroll over it, copy alternating left and right.
+*/
+:root{--bg:#000;--ink:#ecebe6;--dim:#9b9ea3;--red:#d3242e;color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:17px/1.6 Barlow,system-ui,sans-serif;overflow-x:clip}
+h1,h2,.num{font-family:"Barlow Condensed",Barlow,sans-serif;font-weight:700;line-height:1.02;margin:0;text-wrap:balance}
+h1{font-size:clamp(56px,11vw,168px);letter-spacing:-.01em}
+h2{font-size:clamp(34px,4.6vw,56px)}
+p{margin:.7em 0 0;max-width:34em}
+.kicker{font:500 15px/1.3 "Barlow Condensed",sans-serif;color:var(--red);margin:0 0 .6em}
+
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+#veil{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(120% 90% at 50% 50%,transparent 55%,rgba(0,0,0,.55))}
+
+/* chapters scroll over the fixed 3D stage */
+#story{position:relative;z-index:2}
+.chap{min-height:130vh;display:flex;align-items:center;padding:0 max(6vw,20px)}
+.chap.tall{min-height:170vh}
+.copy{max-width:440px;opacity:0;transform:translateY(28px);transition:opacity .8s,transform .8s}
+.copy.on{opacity:1;transform:none}
+.right{justify-content:flex-end}
+.center{justify-content:center;text-align:center}.center p{margin-inline:auto}
+.copy p{color:#d6d5d0}
+.poster{min-height:115vh;align-items:flex-end;justify-content:center;padding-bottom:22vh}
+#hint{position:fixed;left:50%;bottom:28px;z-index:4;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;
+  font:500 15px "Barlow Condensed",sans-serif;color:var(--ink);background:rgba(0,0,0,.72);border:1px solid rgba(211,36,46,.7);border-radius:999px;padding:8px 18px 10px;
+  opacity:0;transition:opacity .6s;pointer-events:none}
+#hint.on{opacity:1}
+#hint i{width:10px;height:10px;border-right:2px solid var(--red);border-bottom:2px solid var(--red);transform:rotate(45deg);animation:nudge 1.6s infinite}
+@keyframes nudge{0%,100%{transform:translateY(-3px) rotate(45deg);opacity:.5}50%{transform:translateY(3px) rotate(45deg);opacity:1}}
+.finale .more{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:500 14px "Barlow Condensed",sans-serif;color:var(--dim);opacity:0;transition:opacity .5s;display:flex;flex-direction:column;align-items:center;gap:6px}
+.finale .more.on{opacity:1}
+.finale .more i{width:9px;height:9px;border-right:2px solid var(--red);border-bottom:2px solid var(--red);animation:nudge 1.6s infinite}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.scrollcue{margin-top:28px;font:500 14px "Barlow Condensed",sans-serif;color:var(--dim)}
+.scrollcue::after{content:"";display:block;width:1px;height:46px;margin-top:10px;background:linear-gradient(var(--ink),transparent);animation:cue 2s infinite}
+@keyframes cue{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+
+/* pinned chapters: the copy holds still (sticky) while the scene keeps moving behind it */
+.chap.pin{min-height:260vh;align-items:flex-start}
+.chap.pin .copy{position:sticky;top:34vh;margin-top:34vh}
+.chap.pin .copy{isolation:isolate}
+.chap.pin .copy::before{content:"";position:absolute;inset:-56px -72px;z-index:-1;background:rgba(0,0,0,.62);
+  -webkit-backdrop-filter:blur(14px) brightness(.55);backdrop-filter:blur(14px) brightness(.55);
+  -webkit-mask-image:radial-gradient(closest-side,#000 62%,transparent);mask-image:radial-gradient(closest-side,#000 62%,transparent)}
+
+/* closing poster: scrolls up into place, then pins while the jet flies into the gap */
+.finale{min-height:300vh;display:block;padding:0}
+.finale .sheet.copy{max-width:none;width:100%}
+.finale .sheet{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;align-items:center;text-align:center;padding:7vh 20px 6vh}
+.finale .script{font:400 clamp(22px,2.4vw,30px)/1 "Great Vibes",cursive;color:var(--ink);margin:0}
+.finale .title{font:900 italic clamp(64px,13vw,190px)/.9 "Exo 2",sans-serif;letter-spacing:-.02em;margin:.08em 0 0;white-space:nowrap}
+.finale .sub{font:800 italic clamp(13px,1.3vw,17px)/1.2 "Exo 2",sans-serif;margin:.6em 0 0;color:var(--ink)}
+.finale .gap{flex:1}
+.finale .name{font:900 italic clamp(40px,7.4vw,112px)/.9 "Exo 2",sans-serif;letter-spacing:-.01em;margin:0;white-space:nowrap}
+.finale .blurb{max-width:46em;margin:1.2em auto 0;font-size:13.5px;line-height:1.55;color:#c9c8c3;text-wrap:balance}
+.finale .rule{width:56px;height:3px;background:var(--red);margin:1.1em auto 0}
+
+/* records */
+.records{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:34px 48px;margin-top:28px;text-align:left}
+.num{font-size:clamp(40px,5vw,64px);color:var(--ink)}
+.num small{font-size:.45em;color:var(--red);margin-left:.15em}
+.rec span{display:block;color:var(--dim);font-size:15px;line-height:1.4}
+#records .copy{max-width:600px}
+
+/* callout marker pinned to a 3D point on the jet */
+#marker{position:fixed;left:0;top:0;z-index:3;pointer-events:none;opacity:0;transition:opacity .5s}
+#marker.on{opacity:1}
+#marker i{position:absolute;left:-9px;top:-9px;width:18px;height:18px;border:2px solid var(--red);border-radius:50%}
+#marker i::after{content:"";position:absolute;inset:-9px;border:1px solid var(--red);border-radius:50%;animation:ping 1.8s infinite}
+#marker b{position:absolute;left:22px;top:-11px;white-space:nowrap;font:500 15px "Barlow Condensed",sans-serif;color:var(--ink);background:rgba(0,0,0,.6);padding:2px 8px}
+@keyframes ping{from{transform:scale(.6);opacity:1}to{transform:scale(1.8);opacity:0}}
+
+/* progress rail */
+#rail{position:fixed;right:18px;top:50%;transform:translateY(-50%);z-index:3;display:flex;flex-direction:column;gap:10px}
+#rail a{width:8px;height:8px;border-radius:50%;background:rgba(236,235,230,.25);display:block;transition:background .3s,transform .3s}
+#rail a.on{background:var(--red);transform:scale(1.4)}
+#rail a:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+
+#loader{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:#000;transition:opacity .9s .25s}
+#loader.done{opacity:0;pointer-events:none}
+#loader.gone{display:none}
+#loader .rig{display:flex;flex-direction:column;align-items:center;gap:22px}
+#loader svg{width:min(300px,62vw);height:auto;overflow:visible;transition:transform 1.1s cubic-bezier(.6,0,.2,1)}
+#loader.done svg{transform:scale(7)}                       /* fly through the inlet into the page */
+#loader .msg{font:500 15px "Barlow Condensed",sans-serif;color:var(--dim);text-align:center;min-height:1.3em}
+#loader .pct{font:700 44px/1 "Barlow Condensed",sans-serif;color:var(--ink);font-variant-numeric:tabular-nums}
+#loader .pct small{font-size:.4em;color:var(--red);margin-left:4px}
+.finale .credit{margin:auto auto 0;padding-top:16px;font-size:12px;line-height:1.5;color:#77797d;max-width:60em}
+
+@media(max-width:700px){
+  /* phones: the jet is lifted to the top half, text sits low. Each section is centred on screen when its
+     key plays, so the bottom padding = half the extra section height + a margin. */
+  .chap,.right,.center{align-items:flex-end;justify-content:flex-start;text-align:left;padding-bottom:23vh}
+  .chap.tall{padding-bottom:43vh}
+  .center p{margin-inline:0}
+  .poster{justify-content:center;padding-bottom:22vh}
+  .chap.pin{align-items:flex-start;padding-bottom:0}
+  .chap.pin .copy{top:52vh;margin-top:52vh}
+  .finale .blurb{font-size:12.5px}
+  .copy{text-shadow:0 1px 14px rgba(0,0,0,.9)}
+  .records{gap:22px 20px}
+  #rail{display:none}
+}
+@media(prefers-reduced-motion:reduce){.copy{transition:none}#hint i,.finale .more i,#marker i::after{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="stage" aria-hidden="true"></canvas>
+<div id="veil"></div>
+<div id="loader" role="status" aria-live="polite">
+  <div class="rig">
+    <svg viewBox="-170 -170 340 340" aria-hidden="true">
+      <defs>
+        <radialGradient id="duct"><stop offset="0" stop-color="#121417"/><stop offset=".75" stop-color="#050607"/><stop offset="1" stop-color="#000"/></radialGradient>
+        <radialGradient id="spikeG" cx=".38" cy=".35" r=".75"><stop offset="0" stop-color="#7d828a"/><stop offset=".45" stop-color="#2b2e33"/><stop offset="1" stop-color="#0b0c0e"/></radialGradient>
+        <linearGradient id="bladeG" x1="0" x2="1"><stop offset="0" stop-color="#3a3e44"/><stop offset=".5" stop-color="#8b9098"/><stop offset="1" stop-color="#2a2d31"/></linearGradient>
+        <radialGradient id="lipG"><stop offset=".86" stop-color="#16181b"/><stop offset=".93" stop-color="#5a5f66"/><stop offset="1" stop-color="#121315"/></radialGradient>
+      </defs>
+      <circle r="160" fill="url(#lipG)"/>
+      <circle r="140" fill="url(#duct)"/>
+      <g id="fan"></g>
+      <circle id="blur" r="132" fill="#6c7178" opacity="0"/>
+      <circle r="134" fill="none" stroke="#0a0b0c" stroke-width="5"/>
+      <circle r="48" fill="url(#spikeG)"/>
+      <circle r="48" fill="none" stroke="#000" stroke-opacity=".6" stroke-width="2"/>
+      <circle id="ring" r="166" fill="none" stroke="#d3242e" stroke-width="3" stroke-linecap="round" transform="rotate(-90)" stroke-dasharray="0 1043"/>
+    </svg>
+    <div class="pct"><span id="pctN">0</span><small>%</small></div>
+    <div class="msg" id="loadMsg">Spooling up the J58</div>
+  </div>
+</div>
+<div id="hint" aria-hidden="true">Scroll to begin<i></i></div>
+<script>
+/* Loader: the compressor face of a J58 spins up as the page loads. main.js reports progress through
+   window.loader.set(0..1) and calls window.loader.done() once the model, textures and shaders are ready. */
+{
+  const fan = document.getElementById('fan'), blur = document.getElementById('blur'), ring = document.getElementById('ring');
+  const pctN = document.getElementById('pctN'), C = 2 * Math.PI * 166;
+  const NS = 'http://www.w3.org/2000/svg', BLADES = 22;
+  for (let i = 0; i < BLADES; i++) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', 'M -6 -46 C -2 -80 4 -108 14 -134 L 28 -131 C 18 -104 12 -78 8 -46 Z');
+    p.setAttribute('fill', 'url(#bladeG)'); p.setAttribute('transform', `rotate(${i * 360 / BLADES})`);
+    fan.append(p);
+  }
+  let target = 0, shown = 0, angle = 0, speed = 0, last = performance.now(), finished = false;
+  const t0 = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    shown += (target - shown) * Math.min(1, dt * (finished ? 7 : 4));
+    speed += ((finished ? 1.15 : shown) * 34 - speed) * Math.min(1, dt * 1.6);   // rad/s, lags like a real spool-up
+    angle += speed * dt;
+    fan.setAttribute('transform', `rotate(${angle * 180 / Math.PI})`);
+    blur.setAttribute('opacity', Math.min(0.55, Math.max(0, (speed - 8) / 40)).toFixed(3)); // motion blur disc at speed
+    ring.setAttribute('stroke-dasharray', `${(shown * C).toFixed(1)} ${C}`);
+    pctN.textContent = Math.round(shown * 100);
+    if (!document.getElementById('loader').classList.contains('gone')) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+  window.loader = {
+    set: p => { target = Math.max(target, Math.min(1, p)); },
+    msg: m => { document.getElementById('loadMsg').textContent = m; },
+    done: () => {
+      target = 1; finished = true;
+      const wait = Math.max(0, 1900 - (performance.now() - t0));  // let the spool-up be seen
+      const ready = () => { if (shown < 0.995) return setTimeout(ready, 60); go(); };  // count all the way to 100 first
+      setTimeout(ready, wait);
+      const go = () => {
+        pctN.textContent = 100; window.loader.msg('Ready');
+        const el = document.getElementById('loader');
+        setTimeout(() => { el.classList.add('done'); setTimeout(() => el.classList.add('gone'), 1400); }, 450);
+      };
+    },
+  };
+}
+</script>
+<div id="marker" aria-hidden="true"><i></i><b></b></div>
+<nav id="rail" aria-label="Chapters"></nav>
+
+<main id="story">
+  <!-- Opening: the 3D floor carries the big SR-71 / BLACKBIRD type; the jet taxis onto it on the first scroll. -->
+  <section class="chap poster" data-key="poster" id="top">
+    <div class="copy">
+      <h1 class="sr">SR-71 Blackbird</h1>
+    </div>
+  </section>
+
+  <section class="chap" data-key="arrive">
+    <div class="copy">
+      <p class="kicker">Lockheed Skunk Works</p>
+      <h2>Mach 3.3. 85,000 feet.</h2>
+      <p>Thirty-two built. None ever lost to enemy fire. Scroll on to explore the engineering behind the fastest jet ever to fly.</p>
+    </div>
+  </section>
+
+  <section class="chap right" data-key="titanium">
+    <div class="copy">
+      <p class="kicker">The airframe</p>
+      <h2>Built from titanium</h2>
+      <p>About 85% of the structure is titanium alloy, because aluminium would soften at cruise. The skin passes 250&nbsp;°C, so panels were made to fit loosely: on the ground the Blackbird leaked fuel, and only sealed up once it was hot.</p>
+    </div>
+  </section>
+
+  <section class="chap pin" data-key="blueprint">
+    <div class="copy">
+      <p class="kicker">The design</p>
+      <h2>Drawn by hand</h2>
+      <p>Kelly Johnson's Skunk Works team developed the Blackbird family in the late 1950s and early 1960s, starting with the CIA's A-12. There was no computer-aided design: the shapes behind it were worked out on drawing boards and slide rules.</p>
+    </div>
+  </section>
+
+  <section class="chap right" data-key="spike" data-anchor="spike" data-label="Inlet spike">
+    <div class="copy">
+      <p class="kicker">Exterior tour, 1 of 5</p>
+      <h2>Inlet spikes</h2>
+      <p>Each engine sits behind a movable cone. As speed builds it slides back about 66&nbsp;cm to hold the shock wave in exactly the right place. At Mach 3.2 the inlet itself makes most of the thrust.</p>
+    </div>
+  </section>
+
+  <section class="chap" data-key="chine" data-anchor="chine" data-label="Chine">
+    <div class="copy">
+      <p class="kicker">Exterior tour, 2 of 5</p>
+      <h2>Chines</h2>
+      <p>The sharp ridges that run along the nose blend body into wing. They add lift, keep the nose steady at high angles, and scatter radar energy away from the receiver.</p>
+    </div>
+  </section>
+
+  <section class="chap right" data-key="cockpit" data-anchor="cockpit" data-label="Tandem cockpit">
+    <div class="copy">
+      <p class="kicker">Exterior tour, 3 of 5</p>
+      <h2>Two crew, one behind the other</h2>
+      <p>The pilot sits in front, the reconnaissance systems officer behind. Both wore full pressure suits, close relatives of the ones astronauts used.</p>
+    </div>
+  </section>
+
+  <section class="chap" data-key="fins" data-anchor="fins" data-label="Canted fins">
+    <div class="copy">
+      <p class="kicker">Exterior tour, 4 of 5</p>
+      <h2>Fins canted 15° inward</h2>
+      <p>Both vertical tails move as one piece and lean inward, which keeps them from reflecting radar straight back like a flat wall.</p>
+    </div>
+  </section>
+
+  <section class="chap right" data-key="engines" data-anchor="nozzle" data-label="J58 nozzle">
+    <div class="copy">
+      <p class="kicker">Exterior tour, 5 of 5</p>
+      <h2>Two Pratt &amp; Whitney J58s</h2>
+      <p>Around 34,000&nbsp;lbf each with afterburner. At low speed they behave like turbojets; at Mach 3 air bypasses the core and they work much more like ramjets.</p>
+    </div>
+  </section>
+
+  <section class="chap pin" data-key="takeoff">
+    <div class="copy">
+      <p class="kicker">Takeoff</p>
+      <h2>Lit by a green flash</h2>
+      <p>JP-7 fuel is so stable you can drop a lit match in it. To start the engines and light the afterburners, the jet injected triethylborane, which ignites on contact with air in a bright green flash.</p>
+    </div>
+  </section>
+
+  <section class="chap right" data-key="climb">
+    <div class="copy">
+      <p class="kicker">Climb</p>
+      <h2>Up to 85,000 feet</h2>
+      <p>At that height the air is so thin the sky goes dark at midday, and the crew could see the curve of the Earth.</p>
+    </div>
+  </section>
+
+  <section class="chap tall" data-key="mach3">
+    <div class="copy">
+      <p class="kicker">Cruise</p>
+      <h2>Mach 3.2, glowing</h2>
+      <p>Friction heats the leading edges until the whole airframe grows several centimetres longer. The crew rode it out in cooled pressure suits, behind canopy glass too hot to touch.</p>
+    </div>
+  </section>
+
+  <section class="chap" data-key="records" id="records">
+    <div class="copy">
+      <p class="kicker">Still standing</p>
+      <h2>Records</h2>
+      <div class="records">
+        <div class="rec"><div class="num" data-count="2193.2" data-dec="1">0<small>mph</small></div><span>Absolute speed record, 28 July 1976 (3,529.6 km/h)</span></div>
+        <div class="rec"><div class="num" data-count="85069" data-dec="0">0<small>ft</small></div><span>Sustained altitude record, the same day (25,929 m)</span></div>
+        <div class="rec"><div class="num">1:54:56</div><span>New York to London, 1 September 1974</span></div>
+        <div class="rec"><div class="num">1:04:20</div><span>Los Angeles to Washington, D.C., on its 1990 retirement flight</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="chap center tall" data-key="outro">
+    <div class="copy">
+      <p class="kicker">1966 to 1998</p>
+      <h2>Gone, but never caught</h2>
+      <p>Retired with its records intact. Nothing that breathes air and carries a crew has officially flown faster since.</p>
+    </div>
+  </section>
+
+  <!-- Closing poster: the type scrolls into place and pins; then the jet flies in from the left into the gap. -->
+  <section class="finale" data-key="finale" data-static="1">
+    <div class="sheet copy on">
+      <p class="script">The Untouchable</p>
+      <h2 class="title">SR-71</h2>
+      <p class="sub">NOTHING ON EARTH COMES CLOSE</p>
+      <div class="gap"></div>
+      <h2 class="name">BLACKBIRD</h2>
+      <div class="rule"></div>
+      <p class="blurb">Designed by Lockheed's Skunk Works and flown by the US Air Force from 1966 to 1998, the SR-71 cruised above Mach 3 at more than 80,000 feet, photographing the ground below and outrunning anything sent to stop it. Two Pratt &amp; Whitney J58 engines, an airframe of titanium, and a speed record that still stands.</p>
+      <div class="more">Keep scrolling<i></i></div>
+      <p class="credit">Designed by Marc Pio Goveia. A fan tribute and learning project. Not affiliated with Lockheed Martin or the US Air Force.<br>3D model: <a href="https://sketchfab.com/3d-models/sr71-908985d8ec544638bcd661bc315597ad" style="color:inherit">Sr71</a> by manilov.ap, licensed under <a href="http://creativecommons.org/licenses/by/4.0/" style="color:inherit">CC BY 4.0</a>.</p>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.27/dist/lenis.min.js"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"}}</script>
+<script type="module" src="main.js"></script>
+</body>
+</html>

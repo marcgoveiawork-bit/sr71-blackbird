@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SR-71 Blackbird</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/*
+VOICE: a flight film, quiet and documentary. Few words, big numbers, the jet does the talking.
+IDEA: one continuous camera take that follows a single SR-71 from hangar to the edge of space.
+PICTURE: your Onshape model, full screen in three.js, lit, flown and heated by the scroll.
+COLOUR and TYPE: titanium black, bone-white text, afterburner orange, stratosphere blue. Barlow Condensed + Barlow.
+LAYOUT: fixed WebGL stage behind; story chapters scroll over it, copy alternating left and right.
+*/
+:root{--bg:#060708;--ink:#ecebe6;--dim:#9b9ea3;--burn:#ff8a3d;--sky:#8fc8ff;color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:17px/1.6 Barlow,system-ui,sans-serif;overflow-x:clip}
+h1,h2,.num{font-family:"Barlow Condensed",Barlow,sans-serif;font-weight:700;line-height:1.02;margin:0;text-wrap:balance}
+h1{font-size:clamp(56px,11vw,168px);letter-spacing:-.01em}
+h2{font-size:clamp(34px,4.6vw,56px)}
+p{margin:.7em 0 0;max-width:34em}
+.kicker{font:500 15px/1.3 "Barlow Condensed",sans-serif;color:var(--burn);margin:0 0 .6em}
+
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+#veil{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(120% 90% at 50% 50%,transparent 55%,rgba(0,0,0,.55))}
+
+/* chapters scroll over the fixed 3D stage */
+#story{position:relative;z-index:2}
+.chap{min-height:130vh;display:flex;align-items:center;padding:0 max(6vw,20px)}
+.chap.tall{min-height:170vh}
+.copy{max-width:440px;opacity:0;transform:translateY(28px);transition:opacity .8s,transform .8s}
+.copy.on{opacity:1;transform:none}
+.right{justify-content:flex-end}
+.center{justify-content:center;text-align:center}.center p{margin-inline:auto}
+.copy p{color:#d6d5d0}
+.hero{min-height:150vh;align-items:flex-start;padding-top:20vh}
+.hero p{font-size:19px}
+.scrollcue{margin-top:28px;font:500 14px "Barlow Condensed",sans-serif;color:var(--dim)}
+.scrollcue::after{content:"";display:block;width:1px;height:46px;margin-top:10px;background:linear-gradient(var(--ink),transparent);animation:cue 2s infinite}
+@keyframes cue{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+
+/* records */
+.records{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:34px 48px;margin-top:28px;text-align:left}
+.num{font-size:clamp(40px,5vw,64px);color:var(--ink)}
+.num small{font-size:.45em;color:var(--sky);margin-left:.15em}
+.rec span{display:block;color:var(--dim);font-size:15px;line-height:1.4}
+#records .copy{max-width:600px}
+
+/* callout marker pinned to a 3D point on the jet */
+#marker{position:fixed;left:0;top:0;z-index:3;pointer-events:none;opacity:0;transition:opacity .5s}
+#marker.on{opacity:1}
+#marker i{position:absolute;left:-9px;top:-9px;width:18px;height:18px;border:2px solid var(--burn);border-radius:50%}
+#marker i::after{content:"";position:absolute;inset:-9px;border:1px solid var(--burn);border-radius:50%;animation:ping 1.8s infinite}
+#marker b{position:absolute;left:22px;top:-11px;white-space:nowrap;font:500 15px "Barlow Condensed",sans-serif;color:var(--ink);background:rgba(6,7,8,.6);padding:2px 8px}
+@keyframes ping{from{transform:scale(.6);opacity:1}to{transform:scale(1.8);opacity:0}}
+
+/* progress rail */
+#rail{position:fixed;right:18px;top:50%;transform:translateY(-50%);z-index:3;display:flex;flex-direction:column;gap:10px}
+#rail a{width:8px;height:8px;border-radius:50%;background:rgba(236,235,230,.25);display:block;transition:background .3s,transform .3s}
+#rail a.on{background:var(--burn);transform:scale(1.4)}
+#rail a:focus-visible{outline:2px solid var(--sky);outline-offset:4px}
+
+#loader{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:var(--bg);transition:opacity 1s}
+#loader.done{opacity:0;pointer-events:none}
+#loader div{width:min(280px,60vw);text-align:center;font:500 15px "Barlow Condensed",sans-serif;color:var(--dim)}
+#loader span{display:block;height:2px;margin-top:12px;background:linear-gradient(90deg,var(--burn) var(--p,0%),rgba(255,255,255,.12) 0)}
+
+footer{position:relative;z-index:2;padding:60px max(6vw,20px) 40px;color:var(--dim);font-size:14px;background:linear-gradient(transparent,var(--bg) 40%)}
+
+@media(max-width:700px){
+  /* phones: the jet is lifted to the top half, text sits low. Each section is centred on screen when its
+     key plays, so the bottom padding = half the extra section height + a margin. */
+  .chap,.right,.center{align-items:flex-end;justify-content:flex-start;text-align:left;padding-bottom:23vh}
+  .chap.tall{padding-bottom:43vh}
+  .center p{margin-inline:0}
+  .hero{align-items:flex-start;padding-bottom:0}
+  .copy{text-shadow:0 1px 14px rgba(0,0,0,.9)}
+  .records{gap:22px 20px}
+  #rail{display:none}
+}
+@media(prefers-reduced-motion:reduce){.copy{transition:none}.scrollcue::after,#marker i::after{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="stage" aria-hidden="true"></canvas>
+<div id="veil"></div>
+<div id="loader"><div>Rolling out of the hangar<span id="bar"></span></div></div>
+<div id="marker" aria-hidden="true"><i></i><b></b></div>
+<nav id="rail" aria-label="Chapters"></nav>
+
+<main id="story">
+  <section class="chap hero" data-key="intro" id="top">
+    <div class="copy">
+      <p class="kicker">Lockheed Skunk Works, 1964</p>
+      <h1>SR-71<br>Blackbird</h1>
+      <p>Mach 3.3. 85,000 feet. Thirty-two built, none lost to enemy fire. Scroll to fly it.</p>
+      <div class="scrollcue">Scroll</div>
+    </div>
+  </section>
+
+  <section class="chap right" data-key="titanium">
+    <div class="copy">
+      <p class="kicker">The airframe</p>
+      <h2>Built from titanium</h2>
+      <p>About 85% of the structure is titanium alloy, because aluminium would soften at cruise. The skin passes 250&nbsp;°C, so panels were made to fit loosely: on the ground the Blackbird leaked fuel, and only sealed up once it was hot.</p>
+    </div>
+  </section>
+
+  <section class="chap" data-key="spike" data-anchor="spike" data-label="Inlet spike">
+    <div class="copy">
+      <p class="kicker">Exterior tour, 1 of 5</p>
+      <h2>Inlet spikes</h2>
+      <p>Each engine sits behind a movable cone. As speed builds it slides back about 66&nbsp;cm to hold the shock wave in exactly the right place. At Mach 3.2 the inlet itself makes most of the thrust.</p>
+    </div>
+  </section>
+
+  <section class="chap right" data-key="chine" data-anchor="chine" data-label="Chine">
+    <div class="copy">
+      <p class="kicker">Exterior tour, 2 of 5</p>
+      <h2>Chines</h2>
+      <p>The sharp ridges that run along the nose blend body into wing. They add lift, keep the nose steady at high angles, and scatter radar energy away from the receiver.</p>
+    </div>
+  </section>
+
+  <section class="chap" data-key="cockpit" data-anchor="cockpit" data-label="Tandem cockpit">
+    <div class="copy">
+      <p class="kicker">Exterior tour, 3 of 5</p>
+      <h2>Two crew, one behind the other</h2>
+      <p>The pilot sits in front, the reconnaissance systems officer behind. Both wore full pressure suits, close relatives of the ones astronauts used.</p>
+    </div>
+  </section>
+
+  <section class="chap right" data-key="fins" data-anchor="fins" data-label="Canted fins">
+    <div class="copy">
+      <p class="kicker">Exterior tour, 4 of 5</p>
+      <h2>Fins canted 15° inward</h2>
+      <p>Both vertical tails move as one piece and lean inward, which keeps them from reflecting radar straight back like a flat wall.</p>
+    </div>
+  </section>
+
+  <section class="chap" data-key="engines" data-anchor="nozzle" data-label="J58 nozzle">
+    <div class="copy">
+      <p class="kicker">Exterior tour, 5 of 5</p>
+      <h2>Two Pratt &amp; Whitney J58s</h2>
+      <p>Around 34,000&nbsp;lbf each with afterburner. At low speed they behave like turbojets; at Mach 3 air bypasses the core and they work much more like ramjets.</p>
+    </div>
+  </section>
+
+  <section class="chap tall right" data-key="takeoff">
+    <div class="copy">
+      <p class="kicker">Takeoff</p>
+      <h2>Lit by a green flash</h2>
+      <p>JP-7 fuel is so stable you can drop a lit match in it. To start the engines and light the afterburners, the jet injected triethylborane, which ignites on contact with air in a bright green flash.</p>
+    </div>
+  </section>
+
+  <section class="chap" data-key="climb">
+    <div class="copy">
+      <p class="kicker">Climb</p>
+      <h2>Where the sky turns black</h2>
+      <p>Above 80,000 feet the air is so thin the sky goes dark at midday, and the crew could see the curve of the Earth.</p>
+    </div>
+  </section>
+
+  <section class="chap tall right" data-key="mach3">
+    <div class="copy">
+      <p class="kicker">Cruise</p>
+      <h2>Mach 3.2, glowing</h2>
+      <p>Friction heats the leading edges until the whole airframe grows several centimetres longer. The crew rode it out in cooled pressure suits, behind canopy glass too hot to touch.</p>
+    </div>
+  </section>
+
+  <section class="chap" data-key="records" id="records">
+    <div class="copy">
+      <p class="kicker">Still standing</p>
+      <h2>Records</h2>
+      <div class="records">
+        <div class="rec"><div class="num" data-count="2193.2" data-dec="1">0<small>mph</small></div><span>Absolute speed record, 28 July 1976 (3,529.6 km/h)</span></div>
+        <div class="rec"><div class="num" data-count="85069" data-dec="0">0<small>ft</small></div><span>Sustained altitude record, the same day (25,929 m)</span></div>
+        <div class="rec"><div class="num">1:54:56</div><span>New York to London, 1 September 1974</span></div>
+        <div class="rec"><div class="num">1:04:20</div><span>Los Angeles to Washington, D.C., on its 1990 retirement flight</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="chap center tall" data-key="outro">
+    <div class="copy">
+      <p class="kicker">1966 to 1998</p>
+      <h2>Gone, but never caught</h2>
+      <p>Retired with its records intact. Nothing that breathes air and carries a crew has officially flown faster since.</p>
+    </div>
+  </section>
+</main>
+<footer>A fan tribute and learning project. Not affiliated with Lockheed Martin or the US Air Force. 3D model built in Onshape.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.1/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.1/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.27/dist/lenis.min.js"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"}}</script>
+<script type="module" src="main.js"></script>
+</body>
+</html>
