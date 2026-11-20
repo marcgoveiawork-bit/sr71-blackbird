@@ -5,6 +5,9 @@ Designed by Marc Pio Goveia as a personal learning project in cinematic web desi
 
 **Live site:** https://marcgoveiawork-bit.github.io/sr71-blackbird/ (open it on any phone or computer)
 
+**Starting a new aircraft from this?** Read [PLAYBOOK.md](PLAYBOOK.md): the full build history, every problem and fix,
+the style system, where the theme colours live, and a ready-to-paste kickoff prompt.
+
 ## The story
 
 | Chapter | What happens |
